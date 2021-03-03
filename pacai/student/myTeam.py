@@ -3,6 +3,11 @@ from pacai.bin import capture
 from pacai.util import reflection
 from pacai.agents.capture.capture import CaptureAgent
 
+'''
+Basic stub class that extends Capture agent
+We need to implement choose action. Currently it just
+returns a random legal action
+'''
 class QuantumSlugAgent(CaptureAgent):
     def __init__(self, index, timeForComputing = 0.1):
         super().__init__(index, timeForComputing)
