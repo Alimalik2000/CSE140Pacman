@@ -244,22 +244,64 @@ class OffenseQuantumSlugAgent(QuantumCaptureAgent):
         features = counter.Counter()
         successor = self.getSuccessor(gameState, action)
         features['successorScore'] = self.getScore(successor)
+        
+        # My Posistion
+        myPos = successor.getAgentState(self.index).getPosition()
+
+        # Compute distance to nearest defender
+        # if the closes defender is is less than or equal to 3 moves away we add
+        # it's distance to the feature vector. Otherwise we don't care.
+        # if the defender is only 1 square away we give a heavy negative weight as
+        # this situation is likely to lead to the agents death.
+        enemies = [successor.getAgentState(i) for i in self.getOpponents(successor)]
+        defenders = [a for a in enemies if not a.isPacman() and a.getPosition() is not None]
+        defender_dists = [self.getMazeDistance(myPos, a.getPosition()) for a in defenders]
+        min_dist = min(defender_dists)
+        being_chased = (min_dist <= 3)
+        features['distanceToDefender'] = min_dist # if (min_dist > 1) else -50 
 
         # Compute distance to the nearest food.
         foodList = self.getFood(successor).asList()
 
         # This should always be True, but better safe than sorry.
+        # Distance to food. We minimize so that pacman will collect the food.
         if (len(foodList) > 0):
-            myPos = successor.getAgentState(self.index).getPosition()
             minDistance = min([self.getMazeDistance(myPos, food) for food in foodList])
-            features['distanceToFood'] = minDistance
+            features['distanceToFood'] = minDistance if not being_chased else (minDistance / 3)
+        
+        # If we are being chased, we want to seek out a power capsule
+        if being_chased:
+            capsules = gameState.getCapsules()
+            if len(capsules) > 0:
+                minDistance = min([self.getMazeDistance(myPos, cap) for cap in capsules])
+                features['nearestCapsule'] = minDistance
+
+        # Check if we will be trapped at this location. If we are being pursued we dont' want to
+        # head in to a dead end. I'm not sure that this really works yet...
+        successor_actions = successor.getLegalActions(self.index)
+        if len(successor_actions) == 2 and being_chased:
+            features["trapped"] = 1
+        
+        # Prefer not to stop
+        if (action == Directions.STOP):
+            features['stop'] = 1
+
+        # Prefer not to reverse.
+        # rev = Directions.REVERSE[gameState.getAgentState(self.index).getDirection()]
+        # if (action == rev):
+        #     features['reverse'] = 1
 
         return features
 
     def getWeights(self, gameState, action):
         return {
             'successorScore': 100,
-            'distanceToFood': -1
+            'distanceToFood': -3,
+            'distanceToDefender': 1,
+            'stop' : -100,
+            'reverse': -2,
+            'nearestCapsule' : -10,
+            'trapped' : -200
         }
 
 
@@ -278,25 +320,50 @@ class DefenseQuantumSlugAgent(QuantumCaptureAgent):
         successor = self.getSuccessor(gameState, action)
 
         myState = successor.getAgentState(self.index)
+        isScared = successor.getAgentState(self.index).isScared()
         myPos = myState.getPosition()
+        
+        # Find the average distance from the agent to each pellet being defended
+        # We give this a negative weight so that the agent will try to stay in 
+        # a position where it is prepared to defend the food from invaders.
+        foodList = self.getFoodYouAreDefending(gameState).asList()
+        food_dists = [self.getMazeDistance(myPos, food) for food in foodList]
+        avg_food_dist = sum(food_dists) / len(food_dists)
+        features['avgFoodDist'] = avg_food_dist
+
 
         # Computes whether we're on defense (1) or offense (0).
+        # We want the defender to stay on side.
         features['onDefense'] = 1
         if (myState.isPacman()):
             features['onDefense'] = 0
 
         # Computes distance to invaders we can see.
+        # We heavily prefer to not have invaders on our side. Additionally if there are invaders
+        # the agent will seek to minimize the distance between itself and the invader.
         enemies = [successor.getAgentState(i) for i in self.getOpponents(successor)]
         invaders = [a for a in enemies if a.isPacman() and a.getPosition() is not None]
+        enemy_defenders = [a for a in enemies if not a.isPacman() and a.getPosition() is not None]
+
         features['numInvaders'] = len(invaders)
 
+        # if there are invaders we seek to minimize that distance.
         if (len(invaders) > 0):
             dists = [self.getMazeDistance(myPos, a.getPosition()) for a in invaders]
-            features['invaderDistance'] = min(dists)
+            features['invaderDistance'] = min(dists) if not isScared else (min(dists) * -1)
+        # if there are no invaders, we minimize the distance between our agent and the enemy defenders
+        # this keeps us relatively lined up with incoming agents before they become invaders so that
+        # our agent is more ready to attack.
+        else:
+            dists = [self.getMazeDistance(myPos, a.getPosition()) for a in enemy_defenders]
+            features['enemyDefenderDist'] = min(dists) if not isScared else (min(dists) * -1)
+            
 
+        # Never stop
         if (action == Directions.STOP):
             features['stop'] = 1
 
+        # Prefer to keep moving forward
         rev = Directions.REVERSE[gameState.getAgentState(self.index).getDirection()]
         if (action == rev):
             features['reverse'] = 1
@@ -307,7 +374,9 @@ class DefenseQuantumSlugAgent(QuantumCaptureAgent):
         return {
             'numInvaders': -1000,
             'onDefense': 100,
-            'invaderDistance': -10,
+            'enemyDefenderDist': -10,
+            'avgFoodDist' : -10,
+            'invaderDistance': -100,
             'stop': -100,
             'reverse': -2
         }
@@ -328,6 +397,7 @@ def createTeam(firstIndex, secondIndex, isRed,
 
     firstAgent = OffenseQuantumSlugAgent
     secondAgent = DefenseQuantumSlugAgent
+    # secondAgent = OffenseQuantumSlugAgent
 
     return [
         firstAgent(firstIndex),
