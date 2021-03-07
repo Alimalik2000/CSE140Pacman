@@ -5,17 +5,50 @@ P4: Pacman Capture the Flag Report
 
 QuantumSlugs Modeling and Agent Design Report
 
-Our project has two agents DefenseQuantumSlugAgent and OffenseQuantumSlugAgent that both serve their respective offensive and defensive roles. Both of these agents extend our QuantumCaptureAgent which itself extends the provided CaptureAgent which inherits from BaseAgent. Originally our QuantumCaptureAgent was created by subclassing all of the methods from the CaptureAgent class. Unfortunately, this class has not implemented the chooseAction method, which returns a legal action within the time limit. We decided to utilize the chooseAction method from the ReflexAgent class, as well as that class’s getSuccessor, evaluate, getFeatures, and getWeights methods. This gave us a solid, simple agent that runs, to serve as the foundation for our QuantumCaptureAgent. 
+Our project has two agents DefenseQuantumSlugAgent and OffenseQuantumSlugAgent that both serve their respective offensive and defensive roles.
+Both of these agents extend our QuantumCaptureAgent which itself extends the provided CaptureAgent which inherits from BaseAgent. 
+Originally our QuantumCaptureAgent was created by subclassing all of the methods from the CaptureAgent class. 
+Unfortunately, this class has not implemented the chooseAction method, which returns a legal action within the time limit. 
+We decided to utilize the chooseAction method from the ReflexAgent class, as well as that class’s getSuccessor, evaluate, getFeatures, and getWeights methods.
+This gave us a solid, simple agent that runs, to serve as the foundation for our QuantumCaptureAgent. 
 
-In examining the baseline agent for weaknesses we identified two main issues with the baseline agents. Firstly, the offensive agent made little effort to avoid capture by opponents, often running directly into defenders while trying to reach food pellets. Second, the defensive agent, while eager to seek out invaders, was often ill-positioned to do so before the invaders were able to collect large amounts of food from our defensive zone.
+In examining the baseline agent for weaknesses we identified two main issues with the baseline agents.
+Firstly, the offensive agent made little effort to avoid capture by opponents, often running directly into defenders while trying to reach food pellets.
+Second, the defensive agent, while eager to seek out invaders, was often ill-positioned to do so before the invaders were able to collect large amounts of food from our defensive zone.
 
-To address the weaknesses in the offensive agent we made additions to the baseline feature vector including, the distance to the nearest opposing defender, a binary ‘trapped’ feature that lets us know if the agent is likely to be trapped by a defender, and a feature encoding the distance to the nearest power capsule. With these features, the agent now seeks out food while also endeavoring to maintain a healthy distance between itself and any defenders it might encounter. However, the feature values are computed in such a way that, if a defender is being chased, which we’ve defined as having a defender within 3 moves from it, it will generally elect to ignore food and instead try to escape. Additionally, while being chased the “nearestCapsule”  is computed, with a negative weighting, so that the agent will seek out the capsule allowing it to consume the chasing ghost.
+To address the weaknesses in the offensive agent we made additions to the baseline feature vector including, the distance to the nearest opposing defender, a binary ‘trapped’ feature 
+that lets us know if the agent is likely to be trapped by a defender, and a feature encoding the distance to the nearest power capsule. 
+With these features, the agent now seeks out food while also endeavoring to maintain a healthy distance between itself and any defenders it might encounter.
+However, the feature values are computed in such a way that, if a defender is being chased, which we’ve defined as having a defender within 3 moves from it, it will generally elect to 
+ignore food and instead try to escape. 
+Additionally, while being chased the “nearestCapsule”  is computed, with a negative weighting, so that the agent will seek out the capsule allowing it to consume the chasing ghost.
 
-To improve our defensive agent, we primarily sought to address the agent’s poor positioning through two methods. First, because the agent was often ill-placed to intercept incoming invaders, we gave it the ability to ‘anticipate’ incoming invaders from the position of opposing defenders who had not yet crossed into our zone of defense. In order to achieve this, we implemented the feature ‘enemyDefenderDist’ which seeks to minimize the agent’s distance to enemy defenders (who as they approach the zone border are likely to become invaders.) However, it is important to note that this must be weighed carefully against the existing ‘onDefense’ feature in order to prevent the defensive agent from going offsides.
+To improve our defensive agent, we primarily sought to address the agent’s poor positioning through two methods.
+First, because the agent was often ill-placed to intercept incoming invaders, we gave it the ability to ‘anticipate’ incoming invaders from the position of opposing defenders who had not 
+yet crossed into our zone of defense.
+In order to achieve this, we implemented the feature ‘enemyDefenderDist’ which seeks to minimize the agent’s distance to enemy defenders (who as they approach the zone border are likely
+to become invaders.) 
+However, it is important to note that this must be weighed carefully against the existing ‘onDefense’ feature in order to prevent the defensive agent from going offsides.
 
-The second improvement made to the defensive agent was the addition of a feature that encodes the agent’s distance from the food which it seeks to protect. In the event that invaders were able to consume some amount of food, it often became the case that food would be positioned unevenly across the map as invaders tend to collect all food in a region before moving on. The baseline agent however does not take this into consideration and can often be found “defending” already lost parts of the game board. The “avgFoodDist” feature encodes the agent's average distance from the food it seeks to defend and attempts to minimize it. This causes it to prefer defending localities near its defensive charge. This feature however is weighed less than the aforementioned “enemyDefenderDist” feature as it was usually more advantageous to be toward the front of the defensive zone, ready to intercept.
+The second improvement made to the defensive agent was the addition of a feature that encodes the agent’s distance from the food which it seeks to protect.
+In the event that invaders were able to consume some amount of food, it often became the case that food would be positioned unevenly across the map as invaders tend to collect all food 
+in a region before moving on. 
+The baseline agent however does not take this into consideration and can often be found “defending” already lost parts of the game board.
+The “avgFoodDist” feature encodes the agent's average distance from the food it seeks to defend and attempts to minimize it. This causes it to prefer defending localities near its 
+defensive charge. 
+This feature however is weighed less than the aforementioned “enemyDefenderDist” feature as it was usually more advantageous to be toward the front of the defensive zone, ready to intercept.
 
-We now wanted to see how our QuantumSlugAgent competes against other teams’ agents in tournaments. Of the teams that we defeated most had not implemented anything in the case that a capsule was consumed by our OffenseQuantumSlugAgent, so their defensive agents were quickly killed off. Appearing that our OffenseQuantumSlugAgent’s added feature to prioritize finding a capsule while being chased paid off, and was getting our team a lot of points. However, the teams that defeated us seemed to exploit a weakness in our DefenseQuantumSlugAgent. It appeared as though our feature allowing DefenseQuantumSlugAgent to consider its position relative to its defended food had backfired. Our DefenseQuantumSlugAgent was positioning itself closer to the food than the enemy, so when enemy offensive agents tended to choose paths to different food, our DefenseQuantumSlugAgent was far behind. 
+We now wanted to see how our QuantumSlugAgent competes against other teams’ agents in tournaments.
+Of the teams that we defeated most had not implemented anything in the case that a capsule was consumed by our OffenseQuantumSlugAgent, so their defensive agents were quickly killed off.
+Appearing that our OffenseQuantumSlugAgent’s added feature to prioritize finding a capsule while being chased paid off, and was getting our team a lot of points.
+However, the teams that defeated us seemed to exploit a weakness in our DefenseQuantumSlugAgent.
+It appeared as though our feature allowing DefenseQuantumSlugAgent to consider its position relative to its defended food had backfired.
+Our DefenseQuantumSlugAgent was positioning itself closer to the food than the enemy, so when enemy offensive agents tended to choose paths to different food, our DefenseQuantumSlugAgent 
+was far behind. 
 
-We decided to have our DefenseQuantumSlugAgent prioritize being closer to the enemy offensive agent, rather than the nearest food pellet. That way if the enemy offense agent chose a different path to different food our DefenseQuantumSlugAgent would be much closer to intercept them. We also made other minor improvements but ensuing our DefenseQuantumSlugAgent was close to the enemies 
-Over the next few tournaments, we continued to make smaller additions to our agents focusing on increasing our strengths with OffsenveQuantumSlugAgent prioritizing pellets and decreasing our weakness with DefenseQuantumSlugAgent prioritizing food over the enemy location. Now we are proud to present our finalized DefenseQuantumSlugAgent and OffensiveQuantumSlugAgent.
+We decided to have our DefenseQuantumSlugAgent prioritize being closer to the enemy offensive agent, rather than the nearest food pellet.
+That way if the enemy offense agent chose a different path to different food our DefenseQuantumSlugAgent would be much closer to intercept them.
+We also made other minor improvements but ensuing our DefenseQuantumSlugAgent was close to the enemies. 
+Over the next few tournaments, we continued to make smaller additions to our agents focusing on increasing our strengths with OffsenveQuantumSlugAgent prioritizing pellets and decreasing
+our weakness with DefenseQuantumSlugAgent prioritizing food over the enemy location.
+Now we are proud to present our finalized DefenseQuantumSlugAgent and OffensiveQuantumSlugAgent.
